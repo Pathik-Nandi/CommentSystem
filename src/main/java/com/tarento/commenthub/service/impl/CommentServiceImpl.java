@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.uuid.Generators;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.ValidationMessage;
 import com.tarento.commenthub.entity.Comment;
 import com.tarento.commenthub.exception.CommentException;
 import com.tarento.commenthub.repository.CommentRepository;
@@ -12,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -25,6 +30,17 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Comment addComment(JsonNode comment) {
         log.info("CommentServiceImpl::addComment:adding comment");
+
+        //CommoentValidaion
+        JsonSchema schema = jsonSchema();
+        Set<ValidationMessage> validationMessages = schema.validate(comment);
+        if (!validationMessages.isEmpty()) {
+            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
+            for (ValidationMessage message : validationMessages) {
+                errorMessage.append(message.getMessage()).append("\n");
+            }
+            throw new CommentException("ERROR", errorMessage.toString());
+        }
         try {
             UUID uuid = Generators.timeBasedGenerator().generate();
             String id = uuid.toString();
@@ -41,6 +57,17 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Comment updateComment(JsonNode updatedComment) {
         log.info("CommentServiceImpl::updateComment:updating comment");
+
+        //CommoentValidaion
+        JsonSchema schema = jsonSchema();
+        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
+        if (!validationMessages.isEmpty()) {
+            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
+            for (ValidationMessage message : validationMessages) {
+                errorMessage.append(message.getMessage()).append("\n");
+            }
+            throw new CommentException("ERROR", errorMessage.toString());
+        }
         Comment commentDetailsFromJson = new Comment();
         commentDetailsFromJson = fetchDetailsofComment(updatedComment);
         if (commentDetailsFromJson.getId() != null){
@@ -51,7 +78,17 @@ public class CommentServiceImpl implements CommentService {
         }else {
             throw new CommentException("ERROR02", "This comment is not present to edit ");
         }
-        return commentDetailsFromJson;
+        return null;
+    }
+
+    private JsonSchema jsonSchema() {
+        try {
+            JsonSchemaFactory schemaFactory = JsonSchemaFactory.getInstance();
+            InputStream schemaStream = schemaFactory.getClass().getResourceAsStream("/commentValidation.json");
+            return schemaFactory.getSchema(schemaStream);
+        } catch (Exception e) {
+            throw new CommentException("ERROR", "Failed to load JSON Schema: " + e.getMessage());
+        }
     }
 
     @Override
