@@ -55,6 +55,11 @@
 			<artifactId>springdoc-openapi-ui</artifactId>
 			<version>1.6.12</version>
 		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.uuid</groupId>
+			<artifactId>java-uuid-generator</artifactId>
+			<version>4.2.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

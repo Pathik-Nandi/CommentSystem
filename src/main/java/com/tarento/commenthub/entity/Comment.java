@@ -6,11 +6,13 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
-import org.springframework.data.annotation.Id;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -24,5 +26,16 @@ public class Comment {
     @Id
     private String id;
 
+    @Type(type = "jsonb")
+    @Column(columnDefinition = "jsonb")
     private JsonNode commentJson;
+
+    private boolean status = Boolean.TRUE;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdDate;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedDate;
 }
