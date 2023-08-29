@@ -23,4 +23,14 @@ public class CommentController {
     public Comment updateComment(@RequestBody JsonNode comment){
         return commentService.updateComment(comment);
     }
+
+    @GetMapping("/get/{commentId}")
+    public Comment getCommentbyId(@PathVariable String commentId){
+        return commentService.getCommentById(commentId);
+    }
+
+    @DeleteMapping("/delete/{commentId}")
+    public String deleteCommentById(@PathVariable String commentId){
+        return commentService.deleteCommentById(commentId);
+    }
 }

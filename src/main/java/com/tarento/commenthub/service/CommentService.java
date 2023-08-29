@@ -7,4 +7,8 @@ public interface CommentService {
     Comment addComment(JsonNode comment);
 
     Comment updateComment(JsonNode comment);
+
+    Comment getCommentById(String id);
+
+    String deleteCommentById(String commentId);
 }

@@ -1,6 +1,8 @@
 package com.tarento.commenthub.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.uuid.Generators;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -42,10 +44,11 @@ public class CommentServiceImpl implements CommentService {
         try {
             UUID uuid = Generators.timeBasedGenerator().generate();
             String id = uuid.toString();
-            Comment commentObj = new Comment();
-            commentObj.setId(id);
-            commentObj.setCommentJson(comment);
-            return commentRepository.save(commentObj);
+            ObjectNode objectComment = (ObjectNode) comment;
+            objectComment.put("id",id);
+            Comment commentDetailsFromJson = new Comment();
+            commentDetailsFromJson = fetchDetailsofComment(comment);
+            return commentRepository.save(commentDetailsFromJson);
         } catch (Exception e) {
             throw new CommentException("ERROR01", "Failed to coment");
         }
@@ -65,16 +68,17 @@ public class CommentServiceImpl implements CommentService {
             }
             throw new CommentException("ERROR", errorMessage.toString());
         }
-        Comment comment = new Comment();
-        if (comment.getId() != null){
-            Optional<Comment> fetchedComment = commentRepository.findById(comment.getId());
+        Comment commentDetailsFromJson = new Comment();
+        commentDetailsFromJson = fetchDetailsofComment(updatedComment);
+        if (commentDetailsFromJson.getId() != null){
+            Optional<Comment> fetchedComment = commentRepository.findById(commentDetailsFromJson.getId());
             if (fetchedComment.isPresent() && fetchedComment.get().isStatus()){
-                return commentRepository.save(comment);
+                return commentRepository.save(commentDetailsFromJson);
             }
         }else {
             throw new CommentException("ERROR02", "This comment is not present to edit ");
         }
-        return comment;
+        return null;
     }
 
     private JsonSchema jsonSchema() {
@@ -85,5 +89,51 @@ public class CommentServiceImpl implements CommentService {
         } catch (Exception e) {
             throw new CommentException("ERROR", "Failed to load JSON Schema: " + e.getMessage());
         }
+    }
+
+    @Override
+    public Comment getCommentById(String id) {
+        log.info("CommentServiceImpl::getCommentById:fetching comment");
+        Optional<Comment> fetchedComment =  commentRepository.findById(id);
+        if(fetchedComment.isEmpty() ){
+            if(!fetchedComment.get().isStatus()) {
+                throw new CommentException("ERROR", "Comment is not found");
+            }else {
+                throw new CommentException("ERROR", "Its a deleted comment");
+            }
+        }
+        return fetchedComment.get();
+    }
+
+    @Override
+    public String deleteCommentById(String commentId) {
+        log.info("CommentServiceImpl::deleteCommentById:deleting comment");
+        Optional<Comment> fetchedComment =  commentRepository.findById(commentId);
+        if(fetchedComment.isPresent()){
+            if (fetchedComment.get().isStatus()){
+                Comment comment = new Comment();
+                comment = fetchedComment.get();
+                comment.setStatus(false);
+                commentRepository.save(comment);
+            }else{
+                throw new CommentException("ERROR03", "You are trying to delete a already deleted comment");
+            }
+        }else {
+            throw new CommentException("ERROR04", "No such comment found");
+        }
+        return null;
+    }
+
+    public Comment fetchDetailsofComment(JsonNode comment){
+        Comment commentFetched = new Comment();
+        commentFetched.setId(comment.get("id").asText());
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode commentJson = objectMapper.createObjectNode();
+        ObjectNode commentObjNode = (ObjectNode) commentJson;
+        commentObjNode.put("comment", comment.get("comment"));
+        commentObjNode.put("file", comment.get("file"));
+        commentObjNode.put("commentSource", comment.get("commentSource"));
+        commentFetched.setCommentJson(commentJson);
+        return commentFetched;
     }
 }
