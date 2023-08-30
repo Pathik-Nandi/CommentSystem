@@ -69,33 +69,42 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Comment addOrupdateComment(JsonNode updatedComment) {
-        log.info("CommentServiceImpl::updateComment:updating comment");
-        if(updatedComment.get("id").isEmpty() || updatedComment.get("id") == null){
+        log.info("CommentServiceImpl::addOrupdateComment:updating comment");
+
+        //CommoentValidaion
+//        JsonSchema schema = jsonSchema();
+//        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
+//        if (!validationMessages.isEmpty()) {
+//            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
+//            for (ValidationMessage message : validationMessages) {
+//                errorMessage.append(message.getMessage()).append("\n");
+//            }
+//            throw new CommentException("ERROR", errorMessage.toString());
+//        }
+
+        if (updatedComment.get("commentId") != null && !updatedComment.get("commentId").asText().isEmpty()) {
+            log.info(updatedComment.get("commentId").asText());
+            Comment commentDetailsFromJson = new Comment();
+            commentDetailsFromJson = fetchDetailsofComment(updatedComment);
+            if (commentDetailsFromJson.getCommentId() != null){
+                Optional<Comment> fetchedComment = commentRepository.findById(commentDetailsFromJson.getCommentId());
+                if (fetchedComment.isPresent() && fetchedComment.get().isStatus()){
+                    return commentRepository.save(commentDetailsFromJson);
+                }else {
+                    throw new CommentException("ERROR02"," comment not found or You are tyring to edit a deleted comment");
+                }
+            }
+        }
+        else if (updatedComment.get("commentId").isEmpty() || updatedComment.get("commentId") == null){
             UUID uuid = Generators.timeBasedGenerator().generate();
             String id = uuid.toString();
             ObjectNode objectComment = (ObjectNode) updatedComment;
-            objectComment.put("id",id);
+            objectComment.put("commentId",id);
+            Comment commentDetailsFromJson = new Comment();
+            commentDetailsFromJson = fetchDetailsofComment(updatedComment);
+            return commentRepository.save(commentDetailsFromJson);
         }
-        //CommoentValidaion
-        JsonSchema schema = jsonSchema();
-        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
-        if (!validationMessages.isEmpty()) {
-            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
-            for (ValidationMessage message : validationMessages) {
-                errorMessage.append(message.getMessage()).append("\n");
-            }
-            throw new CommentException("ERROR", errorMessage.toString());
-        }
-        Comment commentDetailsFromJson = new Comment();
-        commentDetailsFromJson = fetchDetailsofComment(updatedComment);
-        if (commentDetailsFromJson.getId() != null){
-            Optional<Comment> fetchedComment = commentRepository.findById(commentDetailsFromJson.getId());
-            if (fetchedComment.isPresent() && fetchedComment.get().isStatus()){
-                return commentRepository.save(commentDetailsFromJson);
-            }
-        }else {
-            throw new CommentException("ERROR02", "This comment is not present to edit ");
-        }
+
         return null;
     }
 
@@ -156,7 +165,7 @@ public class CommentServiceImpl implements CommentService {
 
     public Comment fetchDetailsofComment(JsonNode comment){
         Comment commentFetched = new Comment();
-        commentFetched.setId(comment.get("id").asText());
+        commentFetched.setCommentId(comment.get("commentId").asText());
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode commentJson = objectMapper.createObjectNode();
         ObjectNode commentObjNode = (ObjectNode) commentJson;

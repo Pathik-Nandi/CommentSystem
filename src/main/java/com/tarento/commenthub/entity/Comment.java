@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 public class Comment {
 
     @Id
-    private String id;
+    private String commentId;
 
     @Type(type = "jsonb")
     @Column(columnDefinition = "jsonb")
