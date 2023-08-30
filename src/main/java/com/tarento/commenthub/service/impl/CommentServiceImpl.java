@@ -7,15 +7,20 @@ import com.fasterxml.uuid.Generators;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.ValidationMessage;
+import com.tarento.commenthub.dto.CommentsRequestDTO;
+import com.tarento.commenthub.dto.CommentsResoponseDTO;
 import com.tarento.commenthub.entity.Comment;
+import com.tarento.commenthub.entity.CommentTree;
 import com.tarento.commenthub.exception.CommentException;
 import com.tarento.commenthub.repository.CommentRepository;
 import com.tarento.commenthub.service.CommentService;
+import com.tarento.commenthub.service.CommentTreeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -27,9 +32,17 @@ public class CommentServiceImpl implements CommentService {
     @Autowired
     private CommentRepository commentRepository;
 
+    @Autowired
+    private CommentTreeService commentTreeService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public Comment addComment(JsonNode comment) {
         log.info("CommentServiceImpl::addComment:adding comment");
+
+        commentTreeService.createOrUpdateCommentTree(comment);
 
         //CommoentValidaion
         JsonSchema schema = jsonSchema();
@@ -103,6 +116,18 @@ public class CommentServiceImpl implements CommentService {
             }
         }
         return fetchedComment.get();
+    }
+
+    @Override
+    public CommentsResoponseDTO getComments(CommentsRequestDTO commentsRequestDTO) {
+        CommentTree commentTree = commentTreeService.getCommentTree(commentsRequestDTO);
+        JsonNode childNodes = commentTree.getCommentTreeJson().get("childNodes");
+        List<String> childNodeList = objectMapper.convertValue(childNodes, List.class);
+        List<Comment> comments = commentRepository.findAllById(childNodeList);
+        CommentsResoponseDTO commentsResoponseDTO = new CommentsResoponseDTO();
+        commentsResoponseDTO.setComments(comments);
+        commentsResoponseDTO.setCommentTree(commentTree);
+        return commentsResoponseDTO;
     }
 
     @Override
