@@ -4,7 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tarento.commenthub.constant.Constants;
+import com.tarento.commenthub.dto.Comments;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.entity.CommentTree;
 import com.tarento.commenthub.repository.CommentTreeRepository;
@@ -15,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -32,12 +36,21 @@ public class CommentTreeServiceImpl implements CommentTreeService {
     private CommentTreeRepository commentTreeRepository;
 
     @Override
-    public void createOrUpdateCommentTree(JsonNode commentData) {
-        if (!commentData.get(Constants.COMMENT_TREE_ID).isEmpty()) {
-            updateCommentTree(commentData);
+    public CommentTree createOrUpdateCommentTree(JsonNode commentData) {
+        if (commentData.get(Constants.COMMENT_TREE_ID) != null && !commentData.get(Constants.COMMENT_TREE_ID).isEmpty()) {
+            return updateCommentTree(commentData);
         } else {
-            createCommentTree(commentData);
+            return createCommentTree(commentData);
         }
+    }
+
+    @Override
+    public CommentTree getCommentTreeById(String commentTreeId) {
+        Optional<CommentTree> optionalCommentTree = commentTreeRepository.findById(commentTreeId);
+        if(optionalCommentTree.isPresent()) {
+            return optionalCommentTree.get();
+        }
+        return null;
     }
 
     @Override
@@ -50,15 +63,45 @@ public class CommentTreeServiceImpl implements CommentTreeService {
         return null;
     }
 
-    public void createCommentTree(JsonNode commentData) {
+    public CommentTree createCommentTree(JsonNode commentData) {
         CommentsRequestDTO commentsRequestDTO = getCommentsRequestDTO(commentData);
         String commentTreeId = generateJwtTokenKey(commentsRequestDTO.getEntityID(), commentsRequestDTO.getEntityType(), commentsRequestDTO.getWorkflow());
         log.info("commentTreeId {}", commentTreeId);
+        CommentTree commentTree = new CommentTree();
+        commentTree.setCommentTreeId(commentTreeId);
+        ObjectNode commentTreeJson = null;
+        commentTreeJson.put("commentTreeId", commentTreeId);
+        commentTreeJson.put("entityId", commentData.get("entityId").asText());
+        commentTreeJson.put("entityType", commentData.get("entityType").asText());
+        commentTreeJson.put("workflow", commentData.get("workflow").asText());
 
+        Comments comments = new Comments();
+        comments.setCommentId(commentData.get(Constants.COMMENT_ID).asText());
+
+        ObjectNode commentsNode = objectMapper.valueToTree(comments);
+        commentTreeJson.put("comments", commentsNode);
+        List<String> childNodes = new ArrayList<>();
+        childNodes.add(commentData.get(Constants.COMMENT_ID).asText());
+        ObjectNode childNodesObject = objectMapper.valueToTree(childNodes);
+
+        commentTreeJson.put("childNodes", childNodesObject);
+
+        commentTree.setCommentTreeJson(commentTreeJson);
+        return commentTreeRepository.save(commentTree);
     }
 
-    public void updateCommentTree(JsonNode commentData) {
+    public CommentTree updateCommentTree(JsonNode commentData) {
+        CommentTree commentTree;
+        String commentTreeId = commentData.get(Constants.COMMENT_TREE_ID).asText();
+        Optional<CommentTree> optCommentTree = commentTreeRepository.findById(commentTreeId);
+        if(optCommentTree.isPresent()) {
+            commentTree = optCommentTree.get();
+            JsonNode commentTreeJson = commentTree.getCommentTreeJson();
+            Comments myEntity = objectMapper.convertValue(commentTreeJson.get("comments"), Comments.class);
 
+
+        }
+        return null;
     }
 
     public String generateJwtTokenKey(String entityId, String entityType, String workflow) {

@@ -6,9 +6,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.uuid.Generators;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.ValidationMessage;
+import com.tarento.commenthub.constant.Constants;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.dto.CommentsResoponseDTO;
+import com.tarento.commenthub.dto.ResponseDTO;
 import com.tarento.commenthub.entity.Comment;
 import com.tarento.commenthub.entity.CommentTree;
 import com.tarento.commenthub.exception.CommentException;
@@ -22,7 +23,6 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -39,41 +39,12 @@ public class CommentServiceImpl implements CommentService {
     private ObjectMapper objectMapper;
 
     @Override
-    public Comment addComment(JsonNode comment) {
-        log.info("CommentServiceImpl::addComment:adding comment");
-
-        commentTreeService.createOrUpdateCommentTree(comment);
-
-        //CommoentValidaion
-        JsonSchema schema = jsonSchema();
-        Set<ValidationMessage> validationMessages = schema.validate(comment);
-        if (!validationMessages.isEmpty()) {
-            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
-            for (ValidationMessage message : validationMessages) {
-                errorMessage.append(message.getMessage()).append("\n");
-            }
-            throw new CommentException("ERROR", errorMessage.toString());
-        }
-        try {
-            UUID uuid = Generators.timeBasedGenerator().generate();
-            String id = uuid.toString();
-            ObjectNode objectComment = (ObjectNode) comment;
-            objectComment.put("id",id);
-            Comment commentDetailsFromJson = new Comment();
-            commentDetailsFromJson = fetchDetailsofComment(comment);
-            return commentRepository.save(commentDetailsFromJson);
-        } catch (Exception e) {
-            throw new CommentException("ERROR01", "Failed to coment");
-        }
-    }
-
-    @Override
-    public Comment addOrupdateComment(JsonNode updatedComment) {
+    public ResponseDTO addOrupdateComment(JsonNode CommentData) {
         log.info("CommentServiceImpl::addOrupdateComment:updating comment");
 
         //CommoentValidaion
 //        JsonSchema schema = jsonSchema();
-//        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
+//        Set<ValidationMessage> validationMessages = schema.validate(CommentData);
 //        if (!validationMessages.isEmpty()) {
 //            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
 //            for (ValidationMessage message : validationMessages) {
@@ -82,29 +53,42 @@ public class CommentServiceImpl implements CommentService {
 //            throw new CommentException("ERROR", errorMessage.toString());
 //        }
 
-        if (updatedComment.get("commentId") != null && !updatedComment.get("commentId").asText().isEmpty()) {
-            log.info(updatedComment.get("commentId").asText());
+        if (CommentData.get("commentId") != null && !CommentData.get("commentId").asText().isEmpty()) {
+            log.info(CommentData.get("commentId").asText());
             Comment commentDetailsFromJson = new Comment();
-            commentDetailsFromJson = fetchDetailsofComment(updatedComment);
+            commentDetailsFromJson = fetchDetailsofComment(CommentData);
             if (commentDetailsFromJson.getCommentId() != null){
                 Optional<Comment> fetchedComment = commentRepository.findById(commentDetailsFromJson.getCommentId());
                 if (fetchedComment.isPresent() && fetchedComment.get().isStatus()){
-                    return commentRepository.save(commentDetailsFromJson);
+                    commentRepository.save(commentDetailsFromJson);
+                    String commentTreeId = objectMapper.convertValue(CommentData.get(Constants.COMMENT_TREE_ID), String.class);
+                    CommentTree commentTree = commentTreeService.getCommentTreeById(commentTreeId);
+                    ResponseDTO responseDTO = new ResponseDTO();
+                    responseDTO.setComment(commentDetailsFromJson);
+                    responseDTO.setCommentTree(commentTree);
+                    return responseDTO;
                 }else {
                     throw new CommentException("ERROR02"," comment not found or You are tyring to edit a deleted comment");
                 }
             }
         }
-        else if (updatedComment.get("commentId").isEmpty() || updatedComment.get("commentId") == null){
+        else if (CommentData.get("commentId") == null || CommentData.get("commentId").isEmpty()){
             UUID uuid = Generators.timeBasedGenerator().generate();
             String id = uuid.toString();
-            ObjectNode objectComment = (ObjectNode) updatedComment;
+            ObjectNode objectComment = (ObjectNode) CommentData;
             objectComment.put("commentId",id);
             Comment commentDetailsFromJson = new Comment();
-            commentDetailsFromJson = fetchDetailsofComment(updatedComment);
-            return commentRepository.save(commentDetailsFromJson);
-        }
+            commentDetailsFromJson = fetchDetailsofComment(CommentData);
+            commentRepository.save(commentDetailsFromJson);
 
+            ((ObjectNode) CommentData).put(Constants.COMMENT_ID, commentDetailsFromJson.getCommentId());
+            CommentTree commentTree = commentTreeService.createOrUpdateCommentTree(CommentData);
+
+            ResponseDTO responseDTO = new ResponseDTO();
+            responseDTO.setComment(commentDetailsFromJson);
+            responseDTO.setCommentTree(commentTree);
+            return responseDTO;
+        }
         return null;
     }
 
@@ -119,20 +103,6 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public Comment getCommentById(String id) {
-        log.info("CommentServiceImpl::getCommentById:fetching comment");
-        Optional<Comment> fetchedComment =  commentRepository.findById(id);
-        if(fetchedComment.isEmpty() ){
-            if(!fetchedComment.get().isStatus()) {
-                throw new CommentException("ERROR", "Comment is not found");
-            }else {
-                throw new CommentException("ERROR", "Its a deleted comment");
-            }
-        }
-        return fetchedComment.get();
-    }
-
-    @Override
     public CommentsResoponseDTO getComments(CommentsRequestDTO commentsRequestDTO) {
         CommentTree commentTree = commentTreeService.getCommentTree(commentsRequestDTO);
         JsonNode childNodes = commentTree.getCommentTreeJson().get("childNodes");
@@ -142,25 +112,6 @@ public class CommentServiceImpl implements CommentService {
         commentsResoponseDTO.setComments(comments);
         commentsResoponseDTO.setCommentTree(commentTree);
         return commentsResoponseDTO;
-    }
-
-    @Override
-    public String deleteCommentById(String commentId) {
-        log.info("CommentServiceImpl::deleteCommentById:deleting comment");
-        Optional<Comment> fetchedComment =  commentRepository.findById(commentId);
-        if(fetchedComment.isPresent()){
-            if (fetchedComment.get().isStatus()){
-                Comment comment = new Comment();
-                comment = fetchedComment.get();
-                comment.setStatus(false);
-                commentRepository.save(comment);
-            }else{
-                throw new CommentException("ERROR03", "You are trying to delete a already deleted comment");
-            }
-        }else {
-            throw new CommentException("ERROR04", "No such comment found");
-        }
-        return null;
     }
 
     public Comment fetchDetailsofComment(JsonNode comment){
