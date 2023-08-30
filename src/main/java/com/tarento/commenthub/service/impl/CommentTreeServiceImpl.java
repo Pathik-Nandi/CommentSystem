@@ -9,6 +9,7 @@ import com.tarento.commenthub.constant.Constants;
 import com.tarento.commenthub.dto.Comments;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.entity.CommentTree;
+import com.tarento.commenthub.exception.CommentException;
 import com.tarento.commenthub.repository.CommentTreeRepository;
 import com.tarento.commenthub.service.CommentTreeService;
 import lombok.extern.log4j.Log4j2;
@@ -67,27 +68,24 @@ public class CommentTreeServiceImpl implements CommentTreeService {
         CommentsRequestDTO commentsRequestDTO = getCommentsRequestDTO(commentData);
         String commentTreeId = generateJwtTokenKey(commentsRequestDTO.getEntityID(), commentsRequestDTO.getEntityType(), commentsRequestDTO.getWorkflow());
         log.info("commentTreeId {}", commentTreeId);
-        CommentTree commentTree = new CommentTree();
-        commentTree.setCommentTreeId(commentTreeId);
-        ObjectNode commentTreeJson = null;
-        commentTreeJson.put("commentTreeId", commentTreeId);
-        commentTreeJson.put("entityId", commentData.get("entityId").asText());
-        commentTreeJson.put("entityType", commentData.get("entityType").asText());
-        commentTreeJson.put("workflow", commentData.get("workflow").asText());
 
-        Comments comments = new Comments();
-        comments.setCommentId(commentData.get(Constants.COMMENT_ID).asText());
+        try {
+            CommentTree commentTree = new CommentTree();
+            commentTree.setCommentTreeId(commentTreeId);
+            ObjectNode commentTreeJson = null;
+            commentTreeJson.put(Constants.COMMENT_TREE_ID, commentTreeId);
+            commentTreeJson.put(Constants.ENTITY_ID, commentData.get(Constants.ENTITY_ID).asText());
+            commentTreeJson.put(Constants.ENTITY_TYPE, commentData.get(Constants.ENTITY_TYPE).asText());
+            commentTreeJson.put(Constants.WORKFLOW, commentData.get(Constants.WORKFLOW).asText());
+            commentTreeJson.putArray(Constants.COMMENTS).add(commentData.get(Constants.COMMENT_ID));
+            commentTreeJson.putArray(Constants.CHILD_NODES).add(commentData.get(Constants.COMMENT_ID));
+            commentTree.setCommentTreeJson(commentTreeJson);
+            return commentTreeRepository.save(commentTree);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new CommentException(Constants.ERROR, e.getMessage());
+        }
 
-        ObjectNode commentsNode = objectMapper.valueToTree(comments);
-        commentTreeJson.put("comments", commentsNode);
-        List<String> childNodes = new ArrayList<>();
-        childNodes.add(commentData.get(Constants.COMMENT_ID).asText());
-        ObjectNode childNodesObject = objectMapper.valueToTree(childNodes);
-
-        commentTreeJson.put("childNodes", childNodesObject);
-
-        commentTree.setCommentTreeJson(commentTreeJson);
-        return commentTreeRepository.save(commentTree);
     }
 
     public CommentTree updateCommentTree(JsonNode commentData) {
@@ -97,10 +95,42 @@ public class CommentTreeServiceImpl implements CommentTreeService {
         if(optCommentTree.isPresent()) {
             commentTree = optCommentTree.get();
             JsonNode commentTreeJson = commentTree.getCommentTreeJson();
-            Comments myEntity = objectMapper.convertValue(commentTreeJson.get("comments"), Comments.class);
 
+            try {
+                String[] hierarchyPath = objectMapper.treeToValue(commentTreeJson.get(Constants.HIERARCHY_PATH), String[].class);
+                String newCommentId = objectMapper.treeToValue(commentData.get(Constants.COMMENT_ID), String.class);
+
+                // Find the target position based on the hierarchy path
+                ObjectNode targetNode = (ObjectNode) findTargetNode(commentTreeJson.get(Constants.COMMENTS), hierarchyPath, 0);
+
+                // Add the new comment
+                ObjectNode newComment = objectMapper.createObjectNode();
+                newComment.put(Constants.COMMENT_ID, newCommentId);
+                targetNode.putArray(Constants.COMMENTS).add(newComment);
+                return commentTreeRepository.save(commentTree);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new CommentException(Constants.ERROR, e.getMessage());
+            }
 
         }
+        return null;
+    }
+
+    public static JsonNode findTargetNode(JsonNode currentNode, String[] hierarchyPath, int index) {
+        if (index >= hierarchyPath.length) {
+            return currentNode;
+        }
+
+        String targetCommentId = hierarchyPath[index];
+        if (currentNode.isArray()) {
+            for (JsonNode childNode : currentNode) {
+                if (childNode.isObject() && targetCommentId.equals(childNode.get(Constants.COMMENT_ID).asText())) {
+                    return findTargetNode(childNode, hierarchyPath, index + 1);
+                }
+            }
+        }
+
         return null;
     }
 
@@ -121,14 +151,15 @@ public class CommentTreeServiceImpl implements CommentTreeService {
     }
 
     public CommentsRequestDTO getCommentsRequestDTO(JsonNode commentData) {
-        String entityId = objectMapper.convertValue(commentData.get("entityId"), String.class);
-        String entityType = objectMapper.convertValue(commentData.get("entityType"), String.class);
-        String workflow = objectMapper.convertValue(commentData.get("workflow"), String.class);
+        String entityId = objectMapper.convertValue(commentData.get(Constants.COMMENT_ID), String.class);
+        String entityType = objectMapper.convertValue(commentData.get(Constants.ENTITY_TYPE), String.class);
+        String workflow = objectMapper.convertValue(commentData.get(Constants.WORKFLOW), String.class);
         CommentsRequestDTO commentsRequestDTO = new CommentsRequestDTO();
         commentsRequestDTO.setEntityID(entityId);
         commentsRequestDTO.setEntityType(entityType);
         commentsRequestDTO.setWorkflow(workflow);
         return commentsRequestDTO;
     }
+
 
 }
