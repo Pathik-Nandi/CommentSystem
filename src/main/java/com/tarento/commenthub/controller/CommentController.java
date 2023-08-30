@@ -16,14 +16,14 @@ public class CommentController {
     @Autowired
     private CommentService commentService;
 
-    @PostMapping("/add")
-    public Comment addComment(@RequestBody JsonNode comment) {
-        return commentService.addComment(comment);
-    }
+//    @PostMapping("/add")
+//    public Comment addComment(@RequestBody JsonNode comment) {
+//        return commentService.addComment(comment);
+//    }
 
-    @PutMapping("/update")
-    public Comment updateComment(@RequestBody JsonNode comment){
-        return commentService.updateComment(comment);
+    @PutMapping("/addOrUpdate")
+    public Comment addOrUpdateComment(@RequestBody JsonNode comment){
+        return commentService.addOrupdateComment(comment);
     }
 
     @GetMapping("/get/{commentId}")

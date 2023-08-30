@@ -68,9 +68,14 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public Comment updateComment(JsonNode updatedComment) {
+    public Comment addOrupdateComment(JsonNode updatedComment) {
         log.info("CommentServiceImpl::updateComment:updating comment");
-
+        if(updatedComment.get("id").isEmpty() || updatedComment.get("id") == null){
+            UUID uuid = Generators.timeBasedGenerator().generate();
+            String id = uuid.toString();
+            ObjectNode objectComment = (ObjectNode) updatedComment;
+            objectComment.put("id",id);
+        }
         //CommoentValidaion
         JsonSchema schema = jsonSchema();
         Set<ValidationMessage> validationMessages = schema.validate(updatedComment);

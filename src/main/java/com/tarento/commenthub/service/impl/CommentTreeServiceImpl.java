@@ -5,9 +5,12 @@ import com.fasterxml.uuid.Generators;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.entity.CommentTree;
 import com.tarento.commenthub.service.CommentTreeService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.util.UUID;
-
+@Service
+@Slf4j
 public class CommentTreeServiceImpl implements CommentTreeService {
     @Override
     public void createOrUpdateCommentTree(JsonNode commentData) {
