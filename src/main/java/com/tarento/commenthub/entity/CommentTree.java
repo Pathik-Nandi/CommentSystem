@@ -24,7 +24,7 @@ import javax.persistence.Table;
 public class CommentTree {
 
     @Id
-    private String id;
+    private String commentTreeId;
 
     @Type(type = "jsonb")
     @Column(columnDefinition = "jsonb")
