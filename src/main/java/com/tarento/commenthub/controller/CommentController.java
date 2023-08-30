@@ -22,8 +22,8 @@ public class CommentController {
 //    }
 
     @PutMapping("/addOrUpdate")
-    public Comment addOrUpdateComment(@RequestBody JsonNode comment){
-        return commentService.addOrupdateComment(comment);
+    public Comment addOrUpdateComment(@RequestBody JsonNode commentData){
+        return commentService.addOrupdateComment(commentData);
     }
 
     @GetMapping("/get/{commentId}")
