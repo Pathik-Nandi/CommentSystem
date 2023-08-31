@@ -2,13 +2,24 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "id": {
+    "commentTreeId": {
       "type": "string"
     },
     "commentId": {
       "type": "string"
     },
+    "entityID": {
+      "type": "string"
+    },
+    "entityType": {
+      "type": "string",
+      "minLength": 1
+    },
     "comment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow": {
       "type": "string",
       "minLength": 1
     },
@@ -42,6 +53,13 @@
         "minLength": 1
       }
     },
+    "path": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "likes": {
       "type": "integer",
       "minimum": 0
@@ -51,6 +69,6 @@
       "minimum": 0
     }
   },
-  "required": ["id", "comment", "file", "commentSource", "tags", "likes", "commentCount"],
+  "required": ["commentTreeId", "comment", "file", "commentSource", "tags", "likes", "commentCount"],
   "additionalProperties": false
 }

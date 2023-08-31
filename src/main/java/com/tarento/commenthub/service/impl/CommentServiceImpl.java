@@ -43,15 +43,15 @@ public class CommentServiceImpl implements CommentService {
         log.info("CommentServiceImpl::addOrupdateComment:updating comment");
 
         //CommoentValidaion
-//        JsonSchema schema = jsonSchema();
-//        Set<ValidationMessage> validationMessages = schema.validate(CommentData);
-//        if (!validationMessages.isEmpty()) {
-//            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
-//            for (ValidationMessage message : validationMessages) {
-//                errorMessage.append(message.getMessage()).append("\n");
-//            }
-//            throw new CommentException("ERROR", errorMessage.toString());
-//        }
+        JsonSchema schema = jsonSchema();
+        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
+        if (!validationMessages.isEmpty()) {
+            StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
+            for (ValidationMessage message : validationMessages) {
+                errorMessage.append(message.getMessage()).append("\n");
+            }
+            throw new CommentException("ERROR", errorMessage.toString());
+        }
 
         if (CommentData.get("commentId") != null && !CommentData.get("commentId").asText().isEmpty()) {
             log.info(CommentData.get("commentId").asText());
