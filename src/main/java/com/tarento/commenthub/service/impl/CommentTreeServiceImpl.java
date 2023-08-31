@@ -67,19 +67,20 @@ public class CommentTreeServiceImpl implements CommentTreeService {
     public CommentTree createCommentTree(JsonNode commentData) {
         CommentsRequestDTO commentsRequestDTO = getCommentsRequestDTO(commentData);
         String commentTreeId = generateJwtTokenKey(commentsRequestDTO.getEntityID(), commentsRequestDTO.getEntityType(), commentsRequestDTO.getWorkflow());
-        log.info("commentTreeId {}", commentTreeId);
+        log.info("commentTreeId: {}", commentTreeId);
 
         try {
             CommentTree commentTree = new CommentTree();
             commentTree.setCommentTreeId(commentTreeId);
-            ObjectNode commentTreeJson = null;
-            commentTreeJson.put(Constants.COMMENT_TREE_ID, commentTreeId);
-            commentTreeJson.put(Constants.ENTITY_ID, commentData.get(Constants.ENTITY_ID).asText());
-            commentTreeJson.put(Constants.ENTITY_TYPE, commentData.get(Constants.ENTITY_TYPE).asText());
-            commentTreeJson.put(Constants.WORKFLOW, commentData.get(Constants.WORKFLOW).asText());
-            commentTreeJson.putArray(Constants.COMMENTS).add(commentData.get(Constants.COMMENT_ID));
-            commentTreeJson.putArray(Constants.CHILD_NODES).add(commentData.get(Constants.COMMENT_ID));
-            commentTree.setCommentTreeJson(commentTreeJson);
+            JsonNode commentTreeJson = objectMapper.createObjectNode();
+            ObjectNode commentTreeObjNode = (ObjectNode) commentTreeJson;
+            commentTreeObjNode.put(Constants.COMMENT_TREE_ID, commentTreeId);
+            commentTreeObjNode.put(Constants.ENTITY_ID, commentData.get(Constants.ENTITY_ID).asText());
+            commentTreeObjNode.put(Constants.ENTITY_TYPE, commentData.get(Constants.ENTITY_TYPE).asText());
+            commentTreeObjNode.put(Constants.WORKFLOW, commentData.get(Constants.WORKFLOW).asText());
+            commentTreeObjNode.putArray(Constants.COMMENTS).add(commentData.get(Constants.COMMENT_ID));
+            commentTreeObjNode.putArray(Constants.CHILD_NODES).add(commentData.get(Constants.COMMENT_ID));
+            commentTree.setCommentTreeJson(commentTreeObjNode);
             return commentTreeRepository.save(commentTree);
         } catch (Exception e) {
             e.printStackTrace();
