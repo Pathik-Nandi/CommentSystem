@@ -12,5 +12,13 @@ public class Constants {
 
     public static final String COMMENT_TREE_ID = "commentTreeId";
 
+    public static final String COMMENTS = "comments";
+
+    public static final String CHILD_NODES = "childNodes";
+
+    public static final String ERROR = "ERROR";
+
+    public static final String HIERARCHY_PATH = "hierarchyPath";
+
 
 }
