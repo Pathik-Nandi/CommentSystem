@@ -8,7 +8,7 @@
     "commentId": {
       "type": "string"
     },
-    "entityID": {
+    "entityId": {
       "type": "string"
     },
     "entityType": {
@@ -27,10 +27,16 @@
       "type": "string",
       "minLength": 1
     },
+    "hierarchyPath": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "commentSource": {
       "type": "object",
       "properties": {
-        "userID": {
+        "userId": {
           "type": "string",
           "minLength": 1
         },
@@ -43,32 +49,10 @@
           "minLength": 1
         }
       },
-      "required": ["userID", "userPic", "userName"],
+      "required": ["userId", "userPic", "userName"],
       "additionalProperties": false
-    },
-    "tags": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "path": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "likes": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "commentCount": {
-      "type": "integer",
-      "minimum": 0
     }
   },
-  "required": ["commentTreeId", "comment", "file", "commentSource", "tags", "likes", "commentCount"],
+  "required": ["comment", "commentSource"],
   "additionalProperties": false
 }

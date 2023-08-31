@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.uuid.Generators;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.ValidationMessage;
 import com.tarento.commenthub.constant.Constants;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.dto.CommentsResoponseDTO;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -44,7 +46,7 @@ public class CommentServiceImpl implements CommentService {
 
         //CommoentValidaion
         JsonSchema schema = jsonSchema();
-        Set<ValidationMessage> validationMessages = schema.validate(updatedComment);
+        Set<ValidationMessage> validationMessages = schema.validate(CommentData);
         if (!validationMessages.isEmpty()) {
             StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
             for (ValidationMessage message : validationMessages) {
@@ -105,7 +107,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public CommentsResoponseDTO getComments(CommentsRequestDTO commentsRequestDTO) {
         CommentTree commentTree = commentTreeService.getCommentTree(commentsRequestDTO);
-        JsonNode childNodes = commentTree.getCommentTreeJson().get("childNodes");
+        JsonNode childNodes = commentTree.getCommentTreeJson().get(Constants.CHILD_NODES);
         List<String> childNodeList = objectMapper.convertValue(childNodes, List.class);
         List<Comment> comments = commentRepository.findAllById(childNodeList);
         CommentsResoponseDTO commentsResoponseDTO = new CommentsResoponseDTO();

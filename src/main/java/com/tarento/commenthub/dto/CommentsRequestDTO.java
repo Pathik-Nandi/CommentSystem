@@ -13,7 +13,7 @@ public class CommentsRequestDTO {
 
     private String entityType;
 
-    private String entityID;
+    private String entityId;
 
     private String workflow;
 }

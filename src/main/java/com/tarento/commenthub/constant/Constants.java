@@ -4,7 +4,7 @@ public class Constants {
 
     public static final String ENTITY_ID = "entityId";
 
-    public static final String ENTITY_TYPE = "entitytype";
+    public static final String ENTITY_TYPE = "entityType";
 
     public static final String WORKFLOW = "workflow";
 
@@ -19,6 +19,9 @@ public class Constants {
     public static final String ERROR = "ERROR";
 
     public static final String HIERARCHY_PATH = "hierarchyPath";
+
+    public static final String COMMENT = "comment";
+
 
 
 }
