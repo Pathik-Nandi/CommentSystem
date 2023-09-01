@@ -22,10 +22,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -62,11 +61,14 @@ public class CommentServiceImpl implements CommentService {
             if (commentDetailsFromJson.getCommentId() != null){
                 Optional<Comment> fetchedComment = commentRepository.findById(commentDetailsFromJson.getCommentId());
                 if (fetchedComment.isPresent() && fetchedComment.get().isStatus()){
-                    commentRepository.save(commentDetailsFromJson);
+                    Comment commentPersisted = commentRepository.save(commentDetailsFromJson);
+
+                    LocalDateTime createdDate = commentRepository.getCreatedDateByCommentId(CommentData.get("commentId").asText());
+                    commentPersisted.setCreatedDate(createdDate);
                     String commentTreeId = objectMapper.convertValue(CommentData.get(Constants.COMMENT_TREE_ID), String.class);
                     CommentTree commentTree = commentTreeService.getCommentTreeById(commentTreeId);
                     ResponseDTO responseDTO = new ResponseDTO();
-                    responseDTO.setComment(commentDetailsFromJson);
+                    responseDTO.setComment(commentPersisted);
                     responseDTO.setCommentTree(commentTree);
                     return responseDTO;
                 }else {
@@ -81,13 +83,13 @@ public class CommentServiceImpl implements CommentService {
             objectComment.put("commentId",id);
             Comment commentDetailsFromJson = new Comment();
             commentDetailsFromJson = fetchDetailsofComment(CommentData);
-            commentRepository.save(commentDetailsFromJson);
+            Comment commentPersisted = commentRepository.save(commentDetailsFromJson);
 
             ((ObjectNode) CommentData).put(Constants.COMMENT_ID, commentDetailsFromJson.getCommentId());
             CommentTree commentTree = commentTreeService.createOrUpdateCommentTree(CommentData);
 
             ResponseDTO responseDTO = new ResponseDTO();
-            responseDTO.setComment(commentDetailsFromJson);
+            responseDTO.setComment(commentPersisted);
             responseDTO.setCommentTree(commentTree);
             return responseDTO;
         }
