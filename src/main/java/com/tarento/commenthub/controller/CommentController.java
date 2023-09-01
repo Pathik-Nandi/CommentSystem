@@ -1,6 +1,7 @@
 package com.tarento.commenthub.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.tarento.commenthub.constant.Constants;
 import com.tarento.commenthub.dto.CommentsRequestDTO;
 import com.tarento.commenthub.dto.CommentsResoponseDTO;
 import com.tarento.commenthub.dto.ResponseDTO;
@@ -30,6 +31,11 @@ public class CommentController {
     @DeleteMapping("/delete/{commentId}")
     public Comment deleteComment(@PathVariable String commentId){
         return commentService.deleteCommentById(commentId);
+    }
+
+    @GetMapping("/health")
+    public String healthCheck() {
+        return Constants.SUCCESS_STRING;
     }
 
 }
