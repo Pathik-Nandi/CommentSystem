@@ -59,7 +59,7 @@ public class CommentTreeServiceImpl implements CommentTreeService {
         if(optionalCommentTree.isPresent()) {
             return optionalCommentTree.get();
         }
-        return null;
+        throw new CommentException(Constants.ERROR, "Comment Tree not found");
     }
 
     public CommentTree createCommentTree(JsonNode commentData) {
@@ -81,6 +81,7 @@ public class CommentTreeServiceImpl implements CommentTreeService {
             commentTreeObjNode.putArray(Constants.COMMENTS).add(commentEntryNode);
 
             commentTreeObjNode.putArray(Constants.CHILD_NODES).add(commentData.get(Constants.COMMENT_ID));
+            commentTreeObjNode.putArray(Constants.FIRST_LEVEL_NODES).add(commentData.get(Constants.COMMENT_ID));
             commentTree.setCommentTreeJson(commentTreeObjNode);
             return commentTreeRepository.save(commentTree);
         } catch (Exception e) {
@@ -99,31 +100,40 @@ public class CommentTreeServiceImpl implements CommentTreeService {
             JsonNode commentTreeJson = commentTree.getCommentTreeJson();
 
             try {
-                String[] hierarchyPath;
-                if(commentTreeJson.get(Constants.HIERARCHY_PATH) != null && !commentTreeJson.get(Constants.HIERARCHY_PATH).asText().isEmpty()) {
-                    hierarchyPath = objectMapper.treeToValue(commentTreeJson.get(Constants.HIERARCHY_PATH), String[].class);
-                } else {
-                    hierarchyPath = new String[0];  // Initialize an empty String array
-                }
-                // Find the target position based on the hierarchy path
-                ArrayNode targetArrayNode = (ArrayNode) findTargetNode(commentTreeJson.get(Constants.COMMENTS), hierarchyPath, 0);
-//                ArrayNode targetArrayNode = (ArrayNode) commentTreeJson.get(Constants.COMMENTS);
-                String newCommentId = objectMapper.treeToValue(commentData.get(Constants.COMMENT_ID), String.class);
+                // Create an object node for a comment entry
+                ObjectNode commentEntryNode = objectMapper.createObjectNode();
+                commentEntryNode.put(Constants.COMMENT_ID, commentData.get(Constants.COMMENT_ID));
 
-                // Add the new comment
-                ObjectNode newComment = objectMapper.createObjectNode();
-                newComment.put(Constants.COMMENT_ID, newCommentId);
-                if(targetArrayNode.get(Constants.COMMENTS) != null && !targetArrayNode.get(Constants.COMMENTS).asText().isEmpty()) {
-                    targetArrayNode.add(newComment);
+                if(commentData.get(Constants.HIERARCHY_PATH) != null && !commentData.get(Constants.HIERARCHY_PATH).isEmpty()) {
+                    String[] hierarchyPath = objectMapper.treeToValue(commentData.get(Constants.HIERARCHY_PATH), String[].class);
+                    // Find the target position based on the hierarchy path
+                    JsonNode targetJsonNode = findTargetNode(commentTreeJson.get(Constants.COMMENTS), hierarchyPath, 0);
+                    if(targetJsonNode.isArray()) {
+                        ArrayNode targetArrayNode = (ArrayNode) targetJsonNode;
+                        targetArrayNode.add(commentEntryNode);
+                    } else {
+                        if(targetJsonNode.get(Constants.CHILDREN) != null) {
+                            ArrayNode childrenArrayNode = (ArrayNode) targetJsonNode.get(Constants.CHILDREN);
+                            childrenArrayNode.add(commentEntryNode);
+                        } else {
+                            ObjectNode targetObjectNode = (ObjectNode) targetJsonNode;
+                            targetObjectNode.putArray(Constants.CHILDREN).add(commentEntryNode);
+                        }
+                    }
                 } else {
-                    targetArrayNode.putArray(Constants.COMMENTS).add(newComment);
+                    ArrayNode targetArrayNode = (ArrayNode) commentTreeJson.get(Constants.COMMENTS);
+                    targetArrayNode.add(commentEntryNode);
+//                    Retrieve the existing firstLevelNodes array
+                    ArrayNode firstLevelNodesArray = (ArrayNode) commentTreeJson.get(Constants.FIRST_LEVEL_NODES);
+//                     Add the new comment ID to the existing firstLevelNodes array
+                    firstLevelNodesArray.add(commentData.get(Constants.COMMENT_ID));
                 }
 
                 // Retrieve the existing childNodes array
-                ArrayNode childNodesArrayNode = (ArrayNode) commentTreeJson.get(Constants.CHILD_NODES);
+                ArrayNode childNodesArray = (ArrayNode) commentTreeJson.get(Constants.CHILD_NODES);
 
 //              Add the new comment ID to the existing childNodes array
-                childNodesArrayNode.add(commentData.get(Constants.COMMENT_ID));
+                childNodesArray.add(commentData.get(Constants.COMMENT_ID));
 
                 return commentTreeRepository.save(commentTree);
             } catch (Exception e) {
@@ -143,7 +153,9 @@ public class CommentTreeServiceImpl implements CommentTreeService {
         String targetCommentId = hierarchyPath[index];
         if (currentNode.isArray()) {
             for (JsonNode childNode : currentNode) {
-                if (childNode.isObject() && targetCommentId.equals(childNode.get(Constants.COMMENT_ID).asText())) {
+                if (childNode.isObject() && targetCommentId.equals(childNode.get(Constants.COMMENT_ID).asText()) && childNode.get(Constants.CHILDREN) != null) {
+                    return findTargetNode(childNode.get(Constants.CHILDREN), hierarchyPath, index + 1);
+                } else if(childNode.isObject() && targetCommentId.equals(childNode.get(Constants.COMMENT_ID).asText())){
                     return findTargetNode(childNode, hierarchyPath, index + 1);
                 }
             }

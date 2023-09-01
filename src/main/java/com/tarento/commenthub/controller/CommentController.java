@@ -26,4 +26,10 @@ public class CommentController {
     public CommentsResoponseDTO getComments(@RequestBody CommentsRequestDTO commentsRequestDTO){
         return commentService.getComments(commentsRequestDTO);
     }
+
+    @DeleteMapping("/delete/{commentId}")
+    public Comment deleteComment(@PathVariable String commentId){
+        return commentService.deleteCommentById(commentId);
+    }
+
 }

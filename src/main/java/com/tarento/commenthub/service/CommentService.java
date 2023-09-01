@@ -11,4 +11,6 @@ public interface CommentService {
 
     CommentsResoponseDTO getComments(CommentsRequestDTO commentsRequestDTO);
 
+    Comment deleteCommentById(String commentId);
+
 }

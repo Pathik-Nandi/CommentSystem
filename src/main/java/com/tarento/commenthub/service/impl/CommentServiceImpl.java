@@ -116,15 +116,31 @@ public class CommentServiceImpl implements CommentService {
         return commentsResoponseDTO;
     }
 
+    @Override
+    public Comment deleteCommentById(String commentId) {
+        log.info("CommentServiceImpl::deleteCommentById:deleting comment");
+        Optional<Comment> fetchedComment =  commentRepository.findById(commentId);
+        if(fetchedComment.isPresent()){
+            if (fetchedComment.get().isStatus()){
+                Comment comment = fetchedComment.get();
+                comment.setStatus(false);
+                return commentRepository.save(comment);
+            }
+            throw new CommentException("ERROR", "You are trying to delete a already deleted comment");
+        }
+        throw new CommentException("ERROR", "No such comment found");
+    }
+
+
     public Comment fetchDetailsofComment(JsonNode comment){
         Comment commentFetched = new Comment();
-        commentFetched.setCommentId(comment.get("commentId").asText());
+        commentFetched.setCommentId(comment.get(Constants.COMMENT_ID).asText());
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode commentJson = objectMapper.createObjectNode();
         ObjectNode commentObjNode = (ObjectNode) commentJson;
-        commentObjNode.put("comment", comment.get("comment"));
-        commentObjNode.put("file", comment.get("file"));
-        commentObjNode.put("commentSource", comment.get("commentSource"));
+        commentObjNode.put(Constants.COMMENT, comment.get(Constants.COMMENT));
+        commentObjNode.put(Constants.FILE, comment.get(Constants.FILE));
+        commentObjNode.put(Constants.COMMENT_SOURCE, comment.get(Constants.COMMENT_SOURCE));
         commentFetched.setCommentJson(commentJson);
         return commentFetched;
     }

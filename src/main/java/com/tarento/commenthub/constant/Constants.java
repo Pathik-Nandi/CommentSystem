@@ -22,6 +22,11 @@ public class Constants {
 
     public static final String COMMENT = "comment";
 
+    public static final String CHILDREN = "children";
 
+    public static final String FIRST_LEVEL_NODES = "firstLevelNodes";
+
+    public static final String COMMENT_SOURCE = "commentSource";
+    public static final String FILE = "file";
 
 }
