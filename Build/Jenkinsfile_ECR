@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+
+    environment {
+        imagename = "uat/tarento/comment-hub-service"
+        registry = "https://495364019757.dkr.ecr.ap-south-1.amazonaws.com"
+        registryCredential = 'ecr:ap-south-1:aws-uat-credentials'
+        dockerImage = ''
+        scannerhome = tool 'sonarqube'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm    
+            }
+        }
+
+        stage('Initialize') {
+            steps {
+                script {
+                    def mavenHome = tool 'maven3'
+                    env.PATH = "${mavenHome}/bin:${env.PATH}"
+                }
+            }
+        }
+
+        stage('sonarscan') {
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'sonarqube-credentials-id', usernameVariable: 'SONAR_USERNAME', passwordVariable: 'SONAR_PASSWORD')
+                ]) {
+                    script {
+                        def projectName = 'comment-hub-service'
+                        def scannerCmd = "${scannerhome}/bin/sonar-scanner " +
+                            "-Dsonar.projectKey=${projectName} " +
+                            "-Dsonar.projectName=${projectName} " +
+                            "-Dsonar.projectVersion=1.0 " +
+                            "-Dsonar.sources=src/main/java/ " +
+                            "-Dsonar.language=java " +
+                            "-Dsonar.java.binaries=. " +
+                            "-Dsonar.java.source=11 " + 
+                            "-Dsonar.login=${SONAR_USERNAME} " +
+                            "-Dsonar.password=${SONAR_PASSWORD} " +
+                            "-Dsonar.host.url=http://10.130.9.123:9000/"
+                        
+                        sh scannerCmd
+                    }
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh "mvn clean install -DskipTests"
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry(registry, registryCredential) {
+                        dockerImage = docker.build("${imagename}")
+                        dockerImage.push("${env.BUILD_NUMBER}")
+                    }
+                }
+            }
+        }
+    }
+    }
