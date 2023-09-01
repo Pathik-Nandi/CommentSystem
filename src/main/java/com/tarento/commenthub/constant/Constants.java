@@ -28,5 +28,6 @@ public class Constants {
 
     public static final String COMMENT_SOURCE = "commentSource";
     public static final String FILE = "file";
+    public static final String SUCCESS_STRING = "success";
 
 }
